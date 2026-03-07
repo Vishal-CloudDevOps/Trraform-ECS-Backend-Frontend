@@ -1,0 +1,69 @@
+name: Terraform CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run pipeline on'
+        required: true
+        default: 'main'
+      environment:
+        description: 'Target environment (dev, test, prod)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - test
+          - prod
+      action:
+        description: 'Terraform action (plan, apply, destroy)'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write   # Required for OIDC
+      contents: read    # Required to checkout code
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/<OIDC_ROLE_NAME>
+          aws-region: ap-south-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: infra/environments/${{ github.event.inputs.environment }}
+        run: terraform init
+
+      - name: Terraform Plan
+        if: ${{ github.event.inputs.action == 'plan' }}
+        working-directory: infra/environments/${{ github.event.inputs.environment }}
+        run: terraform plan -var-file="terraform.tfvars"
+
+      - name: Terraform Apply
+        if: ${{ github.event.inputs.action == 'apply' }}
+        working-directory: infra/environments/${{ github.event.inputs.environment }}
+        run: terraform apply -auto-approve -var-file="terraform.tfvars"
+
+      - name: Terraform Destroy
+        if: ${{ github.event.inputs.action == 'destroy' }}
+        working-directory: infra/environments/${{ github.event.inputs.environment }}
+        run: terraform destroy -auto-approve -var-file="terraform.tfvars"
