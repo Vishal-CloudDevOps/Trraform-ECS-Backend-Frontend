@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Demo CRUD App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+    header { background: #1a73e8; color: white; padding: 16px 32px; font-size: 1.3rem; font-weight: 600; }
+    .container { max-width: 960px; margin: 32px auto; padding: 0 16px; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    h2 { margin-bottom: 16px; font-size: 1.1rem; color: #444; }
+    .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    input, textarea, select { border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; font-size: 0.95rem; width: 100%; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: #1a73e8; }
+    .form-group { flex: 1; min-width: 160px; }
+    label { display: block; margin-bottom: 4px; font-size: 0.85rem; color: #666; }
+    .btn { padding: 9px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; }
+    .btn-primary { background: #1a73e8; color: white; }
+    .btn-primary:hover { background: #1558b0; }
+    .btn-danger { background: #e53935; color: white; }
+    .btn-danger:hover { background: #b71c1c; }
+    .btn-warning { background: #f9a825; color: white; }
+    .btn-warning:hover { background: #c17900; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f5f5f5; text-align: left; padding: 10px 14px; font-size: 0.85rem; color: #555; border-bottom: 2px solid #eee; }
+    td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
+    tr:hover td { background: #fafafa; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; }
+    .badge-green { background: #e6f4ea; color: #2e7d32; }
+    .badge-red { background: #fce8e6; color: #c62828; }
+    .actions { display: flex; gap: 8px; }
+    .alert { padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 0.9rem; }
+    .alert-error { background: #fce8e6; color: #c62828; }
+    .alert-success { background: #e6f4ea; color: #2e7d32; }
+    .empty { text-align: center; color: #aaa; padding: 32px; }
+  </style>
+</head>
+<body>
+  <header>📦 Demo CRUD App — Items Manager</header>
+  <div class="container" id="app">
+    <!-- Form -->
+    <div class="card">
+      <h2 id="form-title">➕ Add New Item</h2>
+      <div id="alert-box" style="display:none"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" id="f-name" placeholder="Item name" />
+        </div>
+        <div class="form-group">
+          <label>Price *</label>
+          <input type="number" id="f-price" placeholder="0.00" step="0.01" min="0" />
+        </div>
+        <div class="form-group" style="max-width:120px">
+          <label>In Stock</label>
+          <select id="f-stock">
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:12px">
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" id="f-desc" placeholder="Optional description" />
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="submitForm()">Save Item</button>
+        <button class="btn" style="background:#eee" onclick="resetForm()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Items Table -->
+    <div class="card">
+      <h2>📋 Items List</h2>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Name</th><th>Description</th><th>Price</th><th>Stock</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="items-tbody">
+          <tr><td colspan="6" class="empty">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const API = window.ENV_API_URL || `${window.location.origin}/api`;
+    let editingId = null;
+
+    async function fetchItems() {
+      try {
+        const res = await fetch(`${API}/items`);
+        if (!res.ok) throw new Error(await res.text());
+        const items = await res.json();
+        renderTable(items);
+      } catch(e) {
+        showAlert('Failed to load items. Is the backend reachable?', 'error');
+      }
+    }
+
+    function renderTable(items) {
+      const tbody = document.getElementById('items-tbody');
+      if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">No items yet. Add one above!</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(i => `
+        <tr>
+          <td>${i.id}</td>
+          <td><strong>${i.name}</strong></td>
+          <td>${i.description || '—'}</td>
+          <td>$${parseFloat(i.price).toFixed(2)}</td>
+          <td><span class="badge ${i.in_stock ? 'badge-green' : 'badge-red'}">${i.in_stock ? 'In Stock' : 'Out'}</span></td>
+          <td class="actions">
+            <button class="btn btn-warning" onclick="editItem(${i.id}, '${i.name}', '${i.description||''}', ${i.price}, ${i.in_stock})">Edit</button>
+            <button class="btn btn-danger" onclick="deleteItem(${i.id})">Delete</button>
+          </td>
+        </tr>`).join('');
+    }
+
+    async function submitForm() {
+      const name = document.getElementById('f-name').value.trim();
+      const price = parseFloat(document.getElementById('f-price').value);
+      const in_stock = document.getElementById('f-stock').value === 'true';
+      const description = document.getElementById('f-desc').value.trim();
+
+      if (!name || isNaN(price)) { showAlert('Name and Price are required.', 'error'); return; }
+
+      const body = { name, price, in_stock, description: description || null };
+      const url = editingId ? `${API}/items/${editingId}` : `${API}/items`;
+      const method = editingId ? 'PUT' : 'POST';
+
+      try {
+        const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        if (!res.ok) throw new Error(await res.text());
+        showAlert(editingId ? 'Item updated!' : 'Item created!', 'success');
+        resetForm();
+        fetchItems();
+      } catch(e) {
+        showAlert('Error saving item: ' + e.message, 'error');
+      }
+    }
+
+
+  function editItem(id, name, description, price, in_stock) {
+    editingId = id;
+    document.getElementById('f-name').value = name;
+    document.getElementById('f-desc').value = description;
+    document.getElementById('f-price').value = price;
+    document.getElementById('f-stock').value = String(in_stock);
+    document.getElementById('form-title').textContent = `✏️ Editing Item #${id}`;
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  async function submitForm() {
+    const name = document.getElementById('f-name').value.trim();
+    const price = parseFloat(document.getElementById('f-price').value);
+    const in_stock = document.getElementById('f-stock').value === 'true';
+    const description = document.getElementById('f-desc').value.trim();
+
+    if (!name || isNaN(price)) { showAlert('Name and Price are required.', 'error'); return; }
+
+    const body = { name, price, in_stock, description: description || null };
+    const url = editingId ? `${API}/items/${editingId}` : `${API}/items`;
+    const method = editingId ? 'PUT' : 'POST';
+
+    try {
+      const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!res.ok) throw new Error(await res.text());
+      showAlert(editingId ? 'Item updated!' : 'Item created!', 'success');
+      resetForm();
+      fetchItems();
+    } catch(e) {
+      showAlert('Error saving item: ' + e.message, 'error');
+    }
+  }
+
+  async function deleteItem(id) {
+    if (!confirm(`Delete item #${id}?`)) return;
+    try {
+      const res = await fetch(`${API}/items/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      showAlert('Item deleted.', 'success');
+      fetchItems();
+    } catch(e) {
+      showAlert('Failed to delete item.', 'error');
+    }
+  }
+
+  function resetForm() {
+    editingId = null;
+    ['f-name','f-desc','f-price'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-stock').value = 'true';
+    document.getElementById('form-title').textContent = '➕ Add New Item';
+  }
+
+  function showAlert(msg, type) {
+    const box = document.getElementById('alert-box');
+    box.className = `alert alert-${type}`;
+    box.textContent = msg;
+    box.style.display = 'block';
+    setTimeout(() => box.style.display = 'none', 3500);
+  }
+
+  async function fetchItems() {
+    try {
+      const res = await fetch(`${API}/items`);
+      if (!res.ok) throw new Error(await res.text());
+      const items = await res.json();
+      renderTable(items);
+    } catch(e) {
+      showAlert('Failed to load items. Is the backend reachable?', 'error');
+    }
+  }
+
+  function renderTable(items) {
+    const tbody = document.getElementById('items-tbody');
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No items yet. Add one above!</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(i => `
+      <tr>
+        <td>${i.id}</td>
+        <td><strong>${i.name}</strong></td>
+        <td>${i.description || '—'}</td>
+        <td>$${parseFloat(i.price).toFixed(2)}</td>
+        <td><span class="badge ${i.in_stock ? 'badge-green' : 'badge-red'}">${i.in_stock ? 'In Stock' : 'Out'}</span></td>
+        <td class="actions">
+          <button class="btn btn-warning" onclick="editItem(${i.id}, '${i.name}', '${i.description||''}', ${i.price}, ${i.in_stock})">Edit</button>
+          <button class="btn btn-danger" onclick="deleteItem(${i.id})">Delete</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  // Initial load
+  fetchItems();
+</script>

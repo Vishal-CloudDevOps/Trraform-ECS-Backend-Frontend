@@ -1,0 +1,25 @@
+[
+  {
+    "name": "demo-app-backend",
+    "image": "${image}",
+    "essential": true,
+    "portMappings": [
+      { "containerPort": 80, "protocol": "tcp" }
+    ],
+    "environment": [
+      { "name": "DB_HOST", "value": "${db_host}" },
+      { "name": "DB_PORT", "value": "5432" },
+      { "name": "DB_USER", "value": "appuser" },
+      { "name": "DB_PASSWORD", "value": "SuperSecretPass123!" },
+      { "name": "DB_NAME", "value": "postgres" }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/demo-backend",
+        "awslogs-region": "${region}",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
+  }
+]
