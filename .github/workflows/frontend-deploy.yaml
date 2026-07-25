@@ -1,1 +1,40 @@
 #This is for my frontend deployment 
+name: Deploy Angular App to ECS
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::762687106929:role/OIDC_Role_GitHubActions
+          aws-region: ap-south-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, Tag, and Push Docker Image
+        run: |
+          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/angular-app:latest
+          docker build -t $IMAGE_URI .
+          docker push $IMAGE_URI
+        env:
+          IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/angular-app:latest
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ecs-task-def.json
+          service: angular-service
+          cluster: angular-cluster
+          wait-for-service-stability: true
