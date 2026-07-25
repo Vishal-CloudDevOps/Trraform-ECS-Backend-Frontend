@@ -1,5 +1,5 @@
 {
-  "family": "${var.project_name}-backend",
+  "family": "${project_name}-backend",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
