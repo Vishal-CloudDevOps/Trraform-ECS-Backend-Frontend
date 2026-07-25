@@ -1,21 +1,29 @@
-[
-  {
-    "name": "demo-app-frontend",
-    "image": "${image}",
-    "essential": true,
-    "portMappings": [
-      { "containerPort": 80, "protocol": "tcp" }
-    ],
-    "environment": [
-      { "name": "ENV_API_URL", "value": "${backend_url}" }
-    ],
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "/ecs/demo-frontend",
-        "awslogs-region": "${region}",
-        "awslogs-stream-prefix": "ecs"
+{
+  "family": "demo-app-frontend-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::762687106929:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "demo-app-frontend",
+      "image": "${image}",
+      "essential": true,
+      "portMappings": [
+        { "containerPort": 80, "protocol": "tcp" }
+      ],
+      "environment": [
+        { "name": "ENV_API_URL", "value": "${backend_url}" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/demo-frontend",
+          "awslogs-region": "${region}",
+          "awslogs-stream-prefix": "ecs"
+        }
       }
     }
-  }
-]
+  ]
+}
