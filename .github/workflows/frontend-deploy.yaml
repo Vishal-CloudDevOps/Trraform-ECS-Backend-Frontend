@@ -35,7 +35,7 @@ jobs:
         run: |
           IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/demo-app-frontend:latest
           echo "Building Docker image: $IMAGE_URI"
-          docker build -t $IMAGE_URI -f frontend/
+          docker build -t $IMAGE_URI frontend/
           docker push $IMAGE_URI
 
       # 5. Render ECS task definition with new image
