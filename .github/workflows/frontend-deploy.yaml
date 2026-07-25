@@ -46,15 +46,15 @@ jobs:
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ecs-task-def.json
+          task-definition: frontend/frontend-task-def.json
           container-name: angular-container
-          image: ${{ steps.login-ecr.outputs.registry }}/angular-app:latest
+          image: ${{ steps.login-ecr.outputs.registry }}/demo-app-frontend:latest
 
       # 6. Deploy to ECS
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: angular-service
-          cluster: angular-cluster
+          service: demo-app-svc
+          cluster: frontend-cluster
           wait-for-service-stability: true
