@@ -1,25 +1,33 @@
-[
-  {
-    "name": "demo-app-backend",
-    "image": "${image}",
-    "essential": true,
-    "portMappings": [
-      { "containerPort": 80, "protocol": "tcp" }
-    ],
-    "environment": [
-      { "name": "DB_HOST", "value": "${db_host}" },
-      { "name": "DB_PORT", "value": "5432" },
-      { "name": "DB_USER", "value": "appuser" },
-      { "name": "DB_PASSWORD", "value": "SuperSecretPass123!" },
-      { "name": "DB_NAME", "value": "postgres" }
-    ],
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "/ecs/demo-backend",
-        "awslogs-region": "${region}",
-        "awslogs-stream-prefix": "ecs"
+{
+  "family": "demo-app-backend-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::762687106929:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "demo-app-backend",
+      "image": "762687106929.dkr.ecr.ap-south-1.amazonaws.com/demo-app-backend:latest",
+      "essential": true,
+      "portMappings": [
+        { "containerPort": 80, "protocol": "tcp" }
+      ],
+      "environment": [
+        { "name": "DB_HOST", "value": "your-db-host.rds.amazonaws.com" },
+        { "name": "DB_PORT", "value": "5432" },
+        { "name": "DB_USER", "value": "appuser" },
+        { "name": "DB_PASSWORD", "value": "SuperSecretPass123!" },
+        { "name": "DB_NAME", "value": "postgres" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/demo-backend",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "ecs"
+        }
       }
     }
-  }
-]
+  ]
+}
