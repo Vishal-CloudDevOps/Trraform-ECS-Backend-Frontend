@@ -1,10 +1,11 @@
 {
-  "family": "demo-app-frontend-task",
+  "family": "${var.project_name}-frontend",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
   "memory": "512",
-  "executionRoleArn": "arn:aws:iam::762687106929:role/ecsTaskExecutionRole",
+  "executionRoleArn": "${execution_role_arn}",
+  "taskRoleArn": "${task_role_arn}",
   "containerDefinitions": [
     {
       "name": "demo-app-frontend",
@@ -14,13 +15,13 @@
         { "containerPort": 80, "protocol": "tcp" }
       ],
       "environment": [
-        { "name": "ENV_API_URL", "value": "demo-app-alb-1146240332.ap-south-1.elb.amazonaws.com/api" }
+        { "name": "ENV_API_URL", "value": "${backend_url}" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
           "awslogs-group": "/ecs/demo-frontend",
-          "awslogs-region": "ap-south-1",
+          "awslogs-region": "${region}",
           "awslogs-stream-prefix": "ecs"
         }
       }
