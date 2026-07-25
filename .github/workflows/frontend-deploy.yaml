@@ -33,13 +33,10 @@ jobs:
       # 4. Build, tag, and push Docker image
       - name: Build, Tag, and Push Docker Image
         run: |
-          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/angular-app:latest
+          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/demo-app-frontend:latest
           echo "Building Docker image: $IMAGE_URI"
-          docker build -t $IMAGE_URI frontend/
-
+          docker build -t $IMAGE_URI -f frontend/
           docker push $IMAGE_URI
-        env:
-          IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/angular-app:latest
 
       # 5. Render ECS task definition with new image
       - name: Render ECS Task Definition
