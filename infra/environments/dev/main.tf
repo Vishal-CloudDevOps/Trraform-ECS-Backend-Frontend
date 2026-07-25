@@ -21,15 +21,13 @@ module "alb" {
 }
 
 module "rds" {
-  source            = "../../modules/rds"
-  project_name      = var.project_name
-  db_password       = var.db_password
-  #master_password   = var.master_password
-  db_user           = var.db_user
-  subnets           = module.vpc.private_subnets
-  vpc_id            = module.vpc.vpc_id
+  source                = "../../modules/rds"
+  project_name          = var.project_name
+  db_password           = var.db_password
+  db_user               = var.db_user
+  subnets               = module.vpc.private_subnets
+  vpc_id                = module.vpc.vpc_id
   ecs_security_group_id = module.ecs_backend.ecs_security_group_id
-
 }
 
 # 🔑 Backend Task Definition
@@ -39,18 +37,21 @@ resource "aws_ecs_task_definition" "backend" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn = module.iam.ecs_task_execution_role_arn
-  task_role_arn      = module.iam.ecs_task_role_arn
+  execution_role_arn       = module.iam.ecs_task_execution_role_arn
+  task_role_arn            = module.iam.ecs_task_role_arn
 
   container_definitions = templatefile(
     "${path.module}/../../../backend/backend-task-def.json",
     {
-      image       = "${module.ecr.backend_repo_url}:latest"
-      db_host     = module.rds.db_endpoint
-      db_user     = var.db_user
-      db_password = var.db_password
-      db_name     = var.db_name
-      region      = var.aws_region
+      project_name       = var.project_name
+      image              = "${module.ecr.backend_repo_url}:latest"
+      db_host            = module.rds.db_endpoint
+      db_user            = var.db_user
+      db_password        = var.db_password
+      db_name            = var.db_name
+      region             = var.aws_region
+      execution_role_arn = module.iam.ecs_task_execution_role_arn
+      task_role_arn      = module.iam.ecs_task_role_arn
     }
   )
 }
@@ -62,20 +63,23 @@ resource "aws_ecs_task_definition" "frontend" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn = module.iam.ecs_task_execution_role_arn
-  task_role_arn      = module.iam.ecs_task_role_arn
-  
+  execution_role_arn       = module.iam.ecs_task_execution_role_arn
+  task_role_arn            = module.iam.ecs_task_role_arn
 
   container_definitions = templatefile(
     "${path.module}/../../../frontend/frontend-task-def.json",
     {
-      image       = "${module.ecr.frontend_repo_url}:latest"
-      backend_url = module.alb.backend_dns_name
-      region      = var.aws_region
+      project_name       = var.project_name
+      image              = "${module.ecr.frontend_repo_url}:latest"
+      backend_url        = module.alb.backend_dns_name
+      region             = var.aws_region
+      execution_role_arn = module.iam.ecs_task_execution_role_arn
+      task_role_arn      = module.iam.ecs_task_role_arn
     }
   )
 }
 
+# 🔑 ECS Backend Service
 module "ecs_backend" {
   source               = "../../modules/ecs"
   project_name         = "${var.project_name}-backend"
@@ -84,11 +88,12 @@ module "ecs_backend" {
   subnets              = module.vpc.public_subnets
   alb_target_group_arn = module.alb.backend_tg_arn
   security_group_id    = module.alb.security_group_id
-  execution_role_arn = module.iam.ecs_task_execution_role_arn
-  task_role_arn      = module.iam.ecs_task_role_arn
+  execution_role_arn   = module.iam.ecs_task_execution_role_arn
+  task_role_arn        = module.iam.ecs_task_role_arn
   task_definition_arn  = aws_ecs_task_definition.backend.arn
 }
 
+# 🔑 ECS Frontend Service
 module "ecs_frontend" {
   source               = "../../modules/ecs"
   project_name         = "${var.project_name}-frontend"
@@ -102,6 +107,7 @@ module "ecs_frontend" {
   task_definition_arn  = aws_ecs_task_definition.frontend.arn
 }
 
+# 🔑 CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "frontend" {
   name              = "/ecs/demo-frontend"
   retention_in_days = 7
